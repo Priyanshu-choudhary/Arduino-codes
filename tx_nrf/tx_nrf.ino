@@ -30,10 +30,11 @@ RF24 radio(9, 10);
 #define VOLT_PIN A0
 #define R1 1000
 #define R2 10000
+#define CURRENT_PIN A1
 
 uint8_t sample=0;
 short volt;
-// The sizeof this struct should not exceed 32 bytes
+short acsref;
 struct Data_to_be_sent {
   byte ch1; 
   short volt;
@@ -52,6 +53,8 @@ void setup()
   bool result = radio.isChipConnected ();
   Serial.println (result);
   analogReference(INTERNAL);
+  delay(500);
+  acsref=voltage(CURRENT_PIN);
 }
 
 /**************************************************/
@@ -59,22 +62,25 @@ void setup()
 
 void loop()
 {
-  /*If your channel is reversed, just swap 0 to 255 by 255 to 0 below
-  EXAMPLE:
-  Normal:    data.ch1 = map( analogRead(A0), 0, 1024, 0, 255);
-  Reversed:  data.ch1 = map( analogRead(A0), 0, 1024, 255, 0);  */
-  
-  sent_data.ch1 = map( analogRead(A0), 0, 1024, 0, 255);
-
+ 
   radio.write(&sent_data, sizeof(Data_to_be_sent));
   Serial.println("sending....");
+
 }
 
 short voltage(uint8_t VOLT_PIN  ){
 
  for(uint8_t i=0;i<100;i++){
  sample+=analogRead( VOLT_PIN );
+ delay(1);
  }
     volt =(((sample/100)* RES)* (R2/(R1+R2)));
     return volt;
   }
+
+  
+ short current(uint8_t CURRENT_PIN){
+   current=((acsref-voltage(CURRENT_PIN))/66);
+  }
+  
+  

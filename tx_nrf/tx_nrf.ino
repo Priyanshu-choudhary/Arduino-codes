@@ -1,11 +1,11 @@
 
 /* Tranmsitter code for the Arduino Radio control with PWM output
- * Install the NRF24 library to your IDE
- * Upload this code to the Arduino UNO, NANO, Pro mini (5V,16MHz)
- * Connect a NRF24 module to it:
- 
+   Install the NRF24 library to your IDE
+   Upload this code to the Arduino UNO, NANO, Pro mini (5V,16MHz)
+   Connect a NRF24 module to it:
+
     Module // Arduino UNO,NANO
-    
+
     GND    ->   GND
     Vcc    ->   3.3V
     CE     ->   D9
@@ -14,8 +14,8 @@
     MOSI   ->   D11
     MISO   ->   D12
 
-This code transmits 1 channels with data from pins A0 POTENTIOMETER
-Please, like share and subscribe : https://www.youtube.com/c/ELECTRONOOBS
+  This code transmits 1 channels with data from pins A0 POTENTIOMETER
+  Please, like share and subscribe : https://www.youtube.com/c/ELECTRONOOBS
 */
 
 #include <SPI.h>
@@ -31,13 +31,18 @@ RF24 radio(9, 10);
 #define R1 1000
 #define R2 10000
 #define CURRENT_PIN A1
-
-uint8_t sample=0;
+#define BAT_WAR 10.00
+#define LED_WAR_PIN  2
+#define INTERVAL 100
+int ledState = LOW;
+unsigned long previousMillis = 0;
+uint8_t sample = 0;
 short volt;
 short acsref;
 struct Data_to_be_sent {
-  byte ch1; 
+  byte ch1;
   short volt;
+  short current
 };
 
 Data_to_be_sent sent_data;
@@ -49,12 +54,14 @@ void setup()
   radio.begin();
   radio.setAutoAck(false);
   radio.setDataRate(RF24_250KBPS);
-  radio.openWritingPipe(my_radio_pipe);  
+  radio.openWritingPipe(my_radio_pipe);
   bool result = radio.isChipConnected ();
   Serial.println (result);
   analogReference(INTERNAL);
   delay(500);
-  acsref=voltage(CURRENT_PIN);
+  acsref = voltage(CURRENT_PIN);
+
+  pinMode(ledPin, OUTPUT);
 }
 
 /**************************************************/
@@ -62,25 +69,51 @@ void setup()
 
 void loop()
 {
- 
-  radio.write(&sent_data, sizeof(Data_to_be_sent));
-  Serial.println("sending....");
+  sent_data.volt = voltage;
+  sent_data.current = current;
+  
 
+ 
+  low_battery_check();
+  radio.write(&sent_data, sizeof(Data_to_be_sent));
 }
 
-short voltage(uint8_t VOLT_PIN  ){
+short voltage(uint8_t VOLT_PIN  ) {
 
- for(uint8_t i=0;i<100;i++){
- sample+=analogRead( VOLT_PIN );
- delay(1);
- }
-    volt =(((sample/100)* RES)* (R2/(R1+R2)));
-    return volt;
+  for (uint8_t i = 0; i < 100; i++) {
+    sample += analogRead( VOLT_PIN );
+    delay(1);
   }
+  return (((sample / 100) * RES) * (R2 / (R1 + R2)));
+}
 
-  
- short current(uint8_t CURRENT_PIN){
-   current=((acsref-voltage(CURRENT_PIN))/66);
+
+
+
+short current(uint8_t CURRENT_PIN) {
+  return ((voltage(CURRENT_PIN) - acsref) * 66);
+}
+
+
+void blinkled() {
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval) {
+    previousMillis = currentMillis;
+    if (ledState == LOW) {
+      ledState = HIGH;
+    } else {
+      ledState = LOW;
+    }
+
   }
+  return 0;
+}
+
+void low_battery_check(){
   
-  
+  if (sent_data.volt < BAT_WAR) {
+    blinkled
+  } else {
+    digitalWrite(LED_WAR_PIN, 0);
+  }
+  }

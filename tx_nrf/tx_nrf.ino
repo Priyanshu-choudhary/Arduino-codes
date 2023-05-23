@@ -26,9 +26,17 @@ const uint64_t my_radio_pipe = 0xE8E8F0F0E1LL; //Remember that this code should 
 
 RF24 radio(9, 10);
 
+#define RES 0.0010752
+#define VOLT_PIN A0
+#define R1 1000
+#define R2 10000
+
+uint8_t sample=0;
+short volt;
 // The sizeof this struct should not exceed 32 bytes
 struct Data_to_be_sent {
   byte ch1; 
+  short volt;
 };
 
 Data_to_be_sent sent_data;
@@ -43,6 +51,7 @@ void setup()
   radio.openWritingPipe(my_radio_pipe);  
   bool result = radio.isChipConnected ();
   Serial.println (result);
+  analogReference(INTERNAL);
 }
 
 /**************************************************/
@@ -60,3 +69,12 @@ void loop()
   radio.write(&sent_data, sizeof(Data_to_be_sent));
   Serial.println("sending....");
 }
+
+short voltage(uint8_t VOLT_PIN  ){
+
+ for(uint8_t i=0;i<100;i++){
+ sample+=analogRead( VOLT_PIN );
+ }
+    volt =(((sample/100)* RES)* (R2/(R1+R2)));
+    return volt;
+  }

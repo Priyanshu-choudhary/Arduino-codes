@@ -30,17 +30,19 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 
 const uint64_t pipeIn = 0xE8E8F0F0E1LL;     //Remember that this code is the same as in the transmitter
-RF24 radio(D4, D8); //CSN and CE pins
-
+//RF24 radio(D4, D8); //CSN and CE pins
+RF24 radio(4, 8);
 // The sizeof this struct should not exceed 32 bytes
 struct Received_data {
-  byte ch1;
+ short volt;
+  short current;
+  short power;
 };
 
-int ch1_value = 0;
+
 Received_data received_data;
 
-
+int mah;
 
 
 /**************************************************/
@@ -62,7 +64,7 @@ void setup()
   Serial.println (result);
   radio.startListening();
 
-  received_data.ch1 = 1000;
+  
 }
 
 /**************************************************/
@@ -85,9 +87,29 @@ void loop()
   //Receive the radio data
   receive_the_data();
 
-  Serial.println(received_data.ch1);
-  lcd.setCursor(1, 1);
-  lcd.print(received_data.ch1);
-  delay(100);
+
+  lcd.setCursor(0, 0);
+  lcd.print(received_data.volt);
+  lcd.print("V");
+
+  lcd.setCursor(7, 0);
+  lcd.print(received_data.power);
+  lcd.print("W");
+
+  lcd.setCursor(12, 0);
+  lcd.print(millis()/1000);
+  lcd.print("V");
+
+  lcd.setCursor(0, 1);
+  lcd.print(received_data.current);
+  lcd.print("C");
+
+  lcd.setCursor(7, 1);
+  lcd.print(mah);
+  lcd.print("mah");
+
+
+  
+
   lcd.clear();
 }//Loop end

@@ -21,33 +21,28 @@
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
-
+#include "priyanshu.h"
 const uint64_t my_radio_pipe = 0xE8E8F0F0E1LL; //Remember that this code should be the same for the receiver
 
 RF24 radio(9, 10);
 
-#define RES 0.0010752
 #define VOLT_PIN A0
 #define R1 1000
 #define R2 10000
 #define CURRENT_PIN A1
 #define BAT_WAR 10.00
 #define LED_WAR_PIN  2
-#define INTERVAL 100
-int ledState = LOW;
-unsigned long previousMillis = 0;
-uint8_t sample = 0;
+
 short volt;
 short acsref;
 struct Data_to_be_sent {
-  byte ch1;
+ 
   short volt;
-  short current
+  short current;
+  short power;
 };
 
 Data_to_be_sent sent_data;
-
-
 
 void setup()
 { Serial.begin(9600);
@@ -59,9 +54,8 @@ void setup()
   Serial.println (result);
   analogReference(INTERNAL);
   delay(500);
-  acsref = voltage(CURRENT_PIN);
-
-  pinMode(ledPin, OUTPUT);
+  acsref = voltage(VOLT_PIN,R1,R2);
+  pinMode(LED_WAR_PIN, OUTPUT);
 }
 
 /**************************************************/
@@ -69,51 +63,10 @@ void setup()
 
 void loop()
 {
-  sent_data.volt = voltage;
-  sent_data.current = current;
-  
+  sent_data.volt = voltage(VOLT_PIN,R1,R2);
+  sent_data.current = current(CURRENT_PIN,acsref);
+  sent_data.power= (sent_data.volt*sent_data.current);
 
- 
-  low_battery_check();
+  low_battery_check(BAT_WAR);
   radio.write(&sent_data, sizeof(Data_to_be_sent));
 }
-
-short voltage(uint8_t VOLT_PIN  ) {
-
-  for (uint8_t i = 0; i < 100; i++) {
-    sample += analogRead( VOLT_PIN );
-    delay(1);
-  }
-  return (((sample / 100) * RES) * (R2 / (R1 + R2)));
-}
-
-
-
-
-short current(uint8_t CURRENT_PIN) {
-  return ((voltage(CURRENT_PIN) - acsref) * 66);
-}
-
-
-void blinkled() {
-  unsigned long currentMillis = millis();
-  if (currentMillis - previousMillis >= interval) {
-    previousMillis = currentMillis;
-    if (ledState == LOW) {
-      ledState = HIGH;
-    } else {
-      ledState = LOW;
-    }
-
-  }
-  return 0;
-}
-
-void low_battery_check(){
-  
-  if (sent_data.volt < BAT_WAR) {
-    blinkled
-  } else {
-    digitalWrite(LED_WAR_PIN, 0);
-  }
-  }
